@@ -22,6 +22,7 @@ export type GameState = {
   piles: Card[][];
   turn: number; // index into players
   playedThisTurn: boolean;
+  drewThisTurn?: boolean; // drawing is optional, max 1 per turn
   idleTurns: number; // consecutive turns with no play while the deck is empty
   winnerIds: string[];
   log: string[];
@@ -32,6 +33,7 @@ export type Action =
   | { type: "start" }
   | { type: "play"; cardIndex: number; pile: number }
   | { type: "movePile"; from: number; to: number }
+  | { type: "draw" }
   | { type: "endTurn" }
   | { type: "rematch" };
 
@@ -66,6 +68,7 @@ export function newGame(host: Player): GameState {
     piles: [[], [], [], [], [], [], [], []],
     turn: 0,
     playedThisTurn: false,
+    drewThisTurn: false,
     idleTurns: 0,
     winnerIds: [],
     log: [`${host.name} created the game`],
@@ -124,13 +127,8 @@ function startRound(g: GameState, rand: () => number) {
 
 function beginTurn(g: GameState) {
   g.playedThisTurn = false;
-  const p = g.players[g.turn];
-  if (g.deck.length) {
-    p.hand.push(g.deck.shift()!);
-    pushLog(g, `${p.name}'s turn (drew a card)`);
-  } else {
-    pushLog(g, `${p.name}'s turn (deck is empty)`);
-  }
+  g.drewThisTurn = false;
+  pushLog(g, `${g.players[g.turn].name}'s turn`);
 }
 
 function checkWin(g: GameState, p: Player) {
@@ -187,6 +185,14 @@ export function applyAction(g: GameState, playerId: string, a: Action, rand: () 
       pushLog(g, `${me.name} moved ${PILE_NAMES[a.from]} onto ${PILE_NAMES[a.to]}`);
       return;
     }
+    case "draw": {
+      if (g.drewThisTurn) throw new GameError("You already drew this turn");
+      if (!g.deck.length) throw new GameError("The deck is empty");
+      me.hand.push(g.deck.shift()!);
+      g.drewThisTurn = true;
+      pushLog(g, `${me.name} drew a card`);
+      return;
+    }
     case "endTurn": {
       if (g.deck.length === 0) {
         g.idleTurns = g.playedThisTurn ? 0 : g.idleTurns + 1;
@@ -223,6 +229,7 @@ export type PublicView = {
   piles: Card[][];
   turnPlayerId: string | null;
   playedThisTurn: boolean;
+  drewThisTurn: boolean;
   winnerIds: string[];
   log: string[];
   round: number;
@@ -245,6 +252,7 @@ export function viewFor(g: GameState, playerId: string | null): PublicView {
     piles: g.piles,
     turnPlayerId: g.phase === "playing" ? g.players[g.turn].id : null,
     playedThisTurn: g.playedThisTurn,
+    drewThisTurn: !!g.drewThisTurn,
     winnerIds: g.winnerIds,
     log: g.log.slice(-12),
     round: g.round,

@@ -64,7 +64,7 @@ export default function Home() {
         <summary style={{ cursor: "pointer" }}>How to play</summary>
         <ul className="rules">
           <li>Everyone gets 7 cards. Four cards go face up on the sides of the deck (N, E, S, W).</li>
-          <li>On your turn you draw a card, then play as many cards as you like.</li>
+          <li>On your turn you may draw one card (optional), and play as many cards as you like.</li>
           <li>Build piles downward in alternating colors: a red 6 on a black 7.</li>
           <li>Kings can only start a pile in one of the four corners.</li>
           <li>You can move a whole pile onto another if its bottom card fits.</li>

@@ -7,7 +7,7 @@ Online multiplayer Kings Corners for 2–4 players in the browser. Create a game
 
 ## Rules implemented
 - 7 cards each; 4 cards face up on the sides. Kings dealt to a side move to a corner.
-- Draw 1 at the start of your turn, then play as many cards as you like.
+- On your turn you may draw 1 card (optional, at any point in the turn), and play as many cards as you like.
 - Build down in alternating colors. Kings only start in empty corners; any card fills an empty side.
 - Move a whole side pile onto another pile when its bottom card fits (or a King-based pile into an empty corner).
 - First to empty their hand wins. If the deck is empty and nobody plays for a full round, lowest penalty (K=10, others=1) wins.

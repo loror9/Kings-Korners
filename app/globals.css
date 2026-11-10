@@ -82,26 +82,39 @@ input::placeholder { color: rgba(244, 241, 232, 0.5); }
   justify-items: center; align-items: center;
   background: rgba(0,0,0,0.12); border-radius: 18px; padding: clamp(8px, 3vw, 18px);
 }
+/* Each slot reserves room for a fanned pile below the first card. */
 .slot {
-  position: relative; width: var(--card-w); height: var(--card-h); border-radius: 8px;
-  border: 2px dashed rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,0.35); font-weight: 700; cursor: pointer; background: none; padding: 0;
+  position: relative; width: var(--card-w); height: calc(var(--card-h) * 1.62); border-radius: 8px;
+  border: 0; display: block; color: rgba(255,255,255,0.35); font-weight: 700; cursor: pointer;
+  background: none; padding: 0; align-self: start;
 }
-.slot.corner { border-color: rgba(242,193,78,0.35); color: rgba(242,193,78,0.5); }
-.slot.filled { border: 0; }
-.slot.target { outline: 3px solid var(--gold); outline-offset: 3px; animation: pulse 1.2s infinite; }
+.empty-slot {
+  position: absolute; inset: 0 0 auto 0; height: var(--card-h); border-radius: 8px;
+  border: 2px dashed rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center;
+}
+.slot.corner .empty-slot { border-color: rgba(242,193,78,0.35); color: rgba(242,193,78,0.5); }
+.fan { position: absolute; inset: 0; }
+.fan-card { position: absolute; left: 0; }
+.fan-card .card { box-shadow: 0 -1px 0 rgba(0,0,0,0.12), 0 2px 5px rgba(0,0,0,0.35); }
+.pile-count {
+  position: absolute; top: -8px; right: -8px; z-index: 30; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 999px; background: #111; color: var(--gold); font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; border: 1px solid rgba(242,193,78,0.6);
+}
+.slot.target { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 10px; animation: pulse 1.2s infinite; }
 .slot.selected { outline: 3px solid #7fd1ff; outline-offset: 3px; }
 @keyframes pulse { 50% { outline-color: rgba(242,193,78,0.35); } }
-.pile-meta {
-  position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.7); color: var(--ink); font-size: 11px; padding: 1px 6px; border-radius: 999px; white-space: nowrap;
-}
+.deck-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; align-self: start; padding-top: calc(var(--card-h) * 0.31); }
+.deck-hint { font-size: 11px; color: var(--gold); }
 .deck {
+  padding: 0; cursor: default; font: inherit; font-size: 18px;
   width: var(--card-w); height: var(--card-h); border-radius: 8px;
   background: repeating-linear-gradient(45deg, #7a1424, #7a1424 6px, #93192d 6px, #93192d 12px);
   border: 3px solid var(--card); display: flex; align-items: center; justify-content: center;
   font-weight: 800; color: var(--card); text-shadow: 0 1px 2px #000;
 }
+.deck.drawable { cursor: pointer; box-shadow: 0 0 0 3px var(--gold); animation: glow 1.4s infinite; }
+@keyframes glow { 50% { box-shadow: 0 0 0 3px rgba(242,193,78,0.3); } }
 .deck.empty { background: none; border: 2px dashed rgba(255,255,255,0.2); color: var(--muted); font-weight: 400; font-size: 12px; text-shadow: none; }
 
 /* Cards */

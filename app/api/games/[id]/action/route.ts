@@ -3,7 +3,7 @@ import { applyAction, GameError, viewFor, type Action } from "@/lib/game";
 import { updateGame } from "@/lib/store";
 import { handleError, tokenFrom } from "@/lib/http";
 
-const TYPES = new Set(["start", "play", "movePile", "endTurn", "rematch"]);
+const TYPES = new Set(["start", "play", "movePile", "draw", "endTurn", "rematch"]);
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

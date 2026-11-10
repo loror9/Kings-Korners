@@ -12,11 +12,10 @@ function started(n = 2): GameState {
   return g;
 }
 
-test("deal: 7 cards each, first player draws 1, 4 sides filled, no king on a side", () => {
+test("deal: 7 cards each (no forced draw), 4 sides filled, no king on a side", () => {
   for (let k = 0; k < 50; k++) {
     const g = started(4);
-    assert.equal(g.players[0].hand.length, 8);
-    for (const p of g.players.slice(1)) assert.equal(p.hand.length, 7);
+    for (const p of g.players) assert.equal(p.hand.length, 7);
     for (const i of [0, 1, 2, 3]) {
       assert.equal(g.piles[i].length, 1);
       assert.notEqual(g.piles[i][0].r, 13);
@@ -86,4 +85,20 @@ test("stalemate when deck empty and a full round passes with no plays", () => {
   applyAction(g, "b", { type: "endTurn" });
   assert.equal(g.phase, "finished");
   assert.deepEqual(g.winnerIds, ["b"]);
+});
+
+test("drawing is optional and limited to one per turn", () => {
+  const g = started();
+  const before = g.players[0].hand.length;
+  applyAction(g, "a", { type: "endTurn" }); // no draw required
+  assert.equal(g.players[0].hand.length, before);
+  assert.equal(g.players[1].hand.length, 7); // next player not auto-drawn
+  applyAction(g, "b", { type: "draw" });
+  assert.equal(g.players[1].hand.length, 8);
+  assert.throws(() => applyAction(g, "b", { type: "draw" }), /already drew/);
+  applyAction(g, "b", { type: "endTurn" });
+  applyAction(g, "a", { type: "draw" }); // resets each turn
+  g.deck = [];
+  applyAction(g, "a", { type: "endTurn" });
+  assert.throws(() => applyAction(g, "b", { type: "draw" }), /empty/);
 });

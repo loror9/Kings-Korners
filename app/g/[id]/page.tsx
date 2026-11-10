@@ -28,6 +28,32 @@ function CardFace({ c, className = "", onClick }: { c: Card; className?: string;
   );
 }
 
+/**
+ * A pile drawn as a downward fan so every card shows. The first gap is always wide enough
+ * to read the bottom card's rank; middle gaps shrink to fit; the top card is fully visible.
+ */
+function PileFan({ pile }: { pile: Card[] }) {
+  const n = pile.length;
+  // Offsets in units of card height. Total fan space below the first card = FAN.
+  const FAN = 0.62, PEEK = 0.24;
+  const offsets: number[] = [0];
+  if (n >= 2) {
+    const rest = n - 2;
+    const gap = rest > 0 ? Math.min(PEEK, (FAN - PEEK) / rest) : 0;
+    for (let i = 1; i < n; i++) offsets.push(i === 1 ? PEEK : PEEK + gap * (i - 1));
+  }
+  return (
+    <div className="fan">
+      {pile.map((c, i) => (
+        <div key={i} className="fan-card" style={{ top: `calc(var(--card-h) * ${offsets[i]})`, zIndex: i }}>
+          <CardFace c={c} />
+        </div>
+      ))}
+      {n > 1 && <span className="pile-count">{n}</span>}
+    </div>
+  );
+}
+
 export default function GamePage() {
   const params = useParams<{ id: string }>();
   const id = (params.id || "").toUpperCase();
@@ -142,6 +168,7 @@ export default function GamePage() {
 
   const me = view?.me ?? null;
   const myTurn = !!view && !!me && view.phase === "playing" && view.turnPlayerId === me.id;
+  const canDraw = myTurn && !busy && !!view && !view.drewThisTurn && view.deckCount > 0;
 
   // Sorted hand for display, keeping the original index the server needs.
   const hand = useMemo(() => {
@@ -259,7 +286,7 @@ export default function GamePage() {
         ? <>Tap a highlighted pile to play <b>{cardLabel(me!.hand[sel.index])}</b></>
         : sel?.kind === "pile"
           ? <>Tap a highlighted pile to move this pile onto it</>
-          : <><b>Your turn.</b> Tap a card, or tap a side pile to move it.</>;
+          : <><b>Your turn.</b> Play cards, move a pile, or draw (optional).</>;
     } else {
       status = <>Waiting for <b>{nameOf(view.turnPlayerId)}</b>…</>;
     }
@@ -299,8 +326,16 @@ export default function GamePage() {
         {GRID.map((g) => {
           if (g === "deck") {
             return (
-              <div key="deck" className={`deck ${view.deckCount ? "" : "empty"}`}>
-                {view.deckCount ? view.deckCount : "empty"}
+              <div key="deck" className="deck-cell">
+                <button
+                  className={`deck ${view.deckCount ? "" : "empty"} ${canDraw ? "drawable" : ""}`}
+                  onClick={() => canDraw && act({ type: "draw" })}
+                  disabled={!canDraw}
+                  aria-label={canDraw ? "Draw a card" : `Deck, ${view.deckCount} cards`}
+                >
+                  {view.deckCount ? view.deckCount : "empty"}
+                </button>
+                {canDraw && <span className="deck-hint">tap to draw</span>}
               </div>
             );
           }
@@ -314,12 +349,9 @@ export default function GamePage() {
               key={g}
               className={`slot ${corner ? "corner" : ""} ${pile.length ? "filled" : ""} ${isTarget ? "target" : ""} ${isSel ? "selected" : ""}`}
               onClick={() => onPile(g)}
-              aria-label={`${corner ? "Corner" : "Side"} pile${top ? `, top ${cardLabel(top)}` : ", empty"}`}
+              aria-label={`${corner ? "Corner" : "Side"} pile${top ? `, ${cardLabel(pile[0])} to ${cardLabel(top)}, ${pile.length} cards` : ", empty"}`}
             >
-              {top ? <CardFace c={top} /> : corner ? "K" : ""}
-              {pile.length > 1 && (
-                <span className="pile-meta">{cardLabel(pile[0])}…{cardLabel(top)} · {pile.length}</span>
-              )}
+              {top ? <PileFan pile={pile} /> : <span className="empty-slot">{corner ? "K" : ""}</span>}
             </button>
           );
         })}
@@ -332,9 +364,14 @@ export default function GamePage() {
           <div className="hand-head">
             <b>Your hand ({me.hand.length})</b>
             {view.phase === "playing" && (
-              <button className="btn small" disabled={!myTurn || busy} onClick={() => act({ type: "endTurn" })}>
-                End turn
-              </button>
+              <div className="row">
+                <button className="btn ghost small" disabled={!canDraw} onClick={() => act({ type: "draw" })}>
+                  {view.drewThisTurn && myTurn ? "Drew ✓" : "Draw (optional)"}
+                </button>
+                <button className="btn small" disabled={!myTurn || busy} onClick={() => act({ type: "endTurn" })}>
+                  End turn
+                </button>
+              </div>
             )}
           </div>
           <div className={`hand ${myTurn ? "" : "disabled"}`}>
