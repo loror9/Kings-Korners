@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { cardLabel, isRed, legalMoveTargets, legalPlayTargets, MAX_PLAYERS, MIN_PLAYERS, type Action, type Card, type PublicView } from "@/lib/game";
+import { cardLabel, isRed, MAX_PLAYERS, MIN_PLAYERS, type Action, type Card, type PublicView } from "@/lib/game";
 import { loadSeat, saveSeat } from "@/lib/seat";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -178,34 +178,15 @@ export default function GamePage() {
       .sort((a, b) => b.c.r - a.c.r || a.c.s.localeCompare(b.c.s));
   }, [me]);
 
-  const targets = useMemo(() => {
-    if (!view || !me || !myTurn || !sel) return [] as number[];
-    if (sel.kind === "card") return legalPlayTargets(view.piles, me.hand[sel.index]);
-    return legalMoveTargets(view.piles, sel.pile);
-  }, [view, me, myTurn, sel]);
-
-  const playableIdx = useMemo(() => {
-    if (!view || !me || !myTurn) return new Set<number>();
-    return new Set(me.hand.map((c, i) => (legalPlayTargets(view.piles, c).length ? i : -1)).filter((i) => i >= 0));
-  }, [view, me, myTurn]);
-
+  // No move hints: tapping a target just attempts the move and the server says if it's illegal.
   function onPile(i: number) {
     if (!view || !myTurn || busy) return;
-    if (sel && targets.includes(i)) {
-      if (sel.kind === "card") act({ type: "play", cardIndex: sel.index, pile: i });
-      else act({ type: "movePile", from: sel.pile, to: i });
-      return;
+    if (sel?.kind === "card") return act({ type: "play", cardIndex: sel.index, pile: i });
+    if (sel?.kind === "pile") {
+      if (sel.pile === i) return setSel(null);
+      return act({ type: "movePile", from: sel.pile, to: i });
     }
-    if (sel?.kind === "pile" && sel.pile === i) return setSel(null);
-    if (i < 4 && view.piles[i].length) {
-      if (legalMoveTargets(view.piles, i).length) return setSel({ kind: "pile", pile: i });
-      if (sel) return setSel(null);
-      return showToast("That pile has nowhere to move");
-    }
-    if (sel) {
-      showToast(sel.kind === "card" ? "That card doesn't fit there" : "That pile can't move there");
-      setSel(null);
-    }
+    if (i < 4 && view.piles[i].length) setSel({ kind: "pile", pile: i });
   }
 
   function onHandCard(index: number) {
@@ -283,9 +264,9 @@ export default function GamePage() {
   if (view.phase === "playing") {
     if (myTurn) {
       status = sel?.kind === "card"
-        ? <>Tap a highlighted pile to play <b>{cardLabel(me!.hand[sel.index])}</b></>
+        ? <>Tap a pile to play <b>{cardLabel(me!.hand[sel.index])}</b> (tap the card again to cancel)</>
         : sel?.kind === "pile"
-          ? <>Tap a highlighted pile to move this pile onto it</>
+          ? <>Tap a pile to move this one onto it (tap it again to cancel)</>
           : <><b>Your turn.</b> Play cards, move a pile, or draw (optional).</>;
     } else {
       status = <>Waiting for <b>{nameOf(view.turnPlayerId)}</b>…</>;
@@ -341,17 +322,18 @@ export default function GamePage() {
           }
           const pile = view.piles[g];
           const corner = g >= 4;
-          const isTarget = targets.includes(g);
+          const complete = pile.length === 13; // full run K down to A
           const isSel = sel?.kind === "pile" && sel.pile === g;
           const top = pile[pile.length - 1];
           return (
             <button
               key={g}
-              className={`slot ${corner ? "corner" : ""} ${pile.length ? "filled" : ""} ${isTarget ? "target" : ""} ${isSel ? "selected" : ""}`}
+              className={`slot ${corner ? "corner" : ""} ${pile.length ? "filled" : ""} ${complete ? "complete" : ""} ${isSel ? "selected" : ""}`}
               onClick={() => onPile(g)}
               aria-label={`${corner ? "Corner" : "Side"} pile${top ? `, ${cardLabel(pile[0])} to ${cardLabel(top)}, ${pile.length} cards` : ", empty"}`}
             >
               {top ? <PileFan pile={pile} /> : <span className="empty-slot">{corner ? "K" : ""}</span>}
+              {complete && <span className="complete-badge">✓ FULL</span>}
             </button>
           );
         })}
@@ -380,7 +362,7 @@ export default function GamePage() {
                 key={`${c.r}${c.s}`}
                 c={c}
                 onClick={() => onHandCard(index)}
-                className={`${sel?.kind === "card" && sel.index === index ? "sel" : ""} ${playableIdx.has(index) ? "playable" : ""}`}
+                className={`${sel?.kind === "card" && sel.index === index ? "sel" : ""}`}
               />
             ))}
           </div>
